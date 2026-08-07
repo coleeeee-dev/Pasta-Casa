@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
 import type { Product } from '../types'
+import { products } from '../data/products'
 import { cartReducer, getCartCount, getCartTotal, initialCartState, type CartState } from './cartReducer'
 
 const STORAGE_KEY = 'pasta-casa-cart'
@@ -18,8 +19,14 @@ const CartContext = createContext<CartContextValue | null>(null)
 function restoreCart(): CartState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const items = raw ? JSON.parse(raw) : []
-    return Array.isArray(items) ? { items, notice: '' } : initialCartState
+    const storedItems = raw ? JSON.parse(raw) : []
+    if (!Array.isArray(storedItems)) return initialCartState
+    const items = storedItems.flatMap((item) => {
+      const product = products.find((candidate) => candidate.id === item?.product?.id && candidate.activo)
+      if (!product || !Number.isFinite(item?.quantity) || item.quantity < 1) return []
+      return [{ product, quantity: Math.min(Math.floor(item.quantity), product.stock) }]
+    })
+    return { items, notice: '' }
   } catch { return initialCartState }
 }
 

@@ -20,7 +20,7 @@ export function Header({ onCartOpen }: { onCartOpen: () => void }) {
         <NavLink to="/quienes-somos" onClick={closeMenu}>Quiénes somos</NavLink>
         <NavLink to="/contacto" onClick={closeMenu}>Contacto</NavLink>
       </nav>
-      <button className="cart-button" onClick={onCartOpen} aria-label={`Abrir carrito, ${count} unidades`}>
+      <button className="cart-button" onClick={onCartOpen} aria-label={`Abrir carrito, ${count} ${count === 1 ? 'docena' : 'docenas'}`}>
         <CartIcon /><span className="cart-label">Tu pedido</span>{count > 0 && <span className="cart-count">{count}</span>}
       </button>
     </div>

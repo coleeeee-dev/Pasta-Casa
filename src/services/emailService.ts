@@ -1,9 +1,10 @@
 import type { EmailPreview, Order } from '../types'
 import { formatARS } from '../utils/currency'
+import { formatDozens, formatFullProductName } from '../utils/dozens'
 
 export function simulateOrderEmail(order: Order): EmailPreview {
   const products = order.items.map(({ product, quantity }) =>
-    `• ${product.nombre} — ${product.variante} x ${quantity}: ${formatARS(product.precio * quantity)}`
+    `${formatDozens(quantity)} × ${formatFullProductName(product)}\nPrecio por docena: ${formatARS(product.precio)}\nSubtotal: ${formatARS(product.precio * quantity)}`
   ).join('\n')
   const preview = {
     subject: `Pedido ${order.code} recibido - Pendiente de pago`,

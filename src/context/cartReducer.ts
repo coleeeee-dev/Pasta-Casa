@@ -17,7 +17,7 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       const current = existing?.quantity ?? 0
       const requested = current + Math.max(1, action.quantity)
       const quantity = Math.min(requested, action.product.stock)
-      const notice = requested > action.product.stock ? `Solo hay ${action.product.stock} unidades disponibles.` : ''
+      const notice = requested > action.product.stock ? `Solo hay ${action.product.stock} ${action.product.stock === 1 ? 'docena disponible' : 'docenas disponibles'}.` : ''
       const items = existing
         ? state.items.map((item) => item.product.id === action.product.id ? { ...item, quantity } : item)
         : [...state.items, { product: action.product, quantity }]
@@ -30,7 +30,7 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       const quantity = Math.min(action.quantity, target.product.stock)
       return {
         items: state.items.map((item) => item.product.id === action.productId ? { ...item, quantity } : item),
-        notice: action.quantity > target.product.stock ? `No podés superar el stock de ${target.product.stock} unidades.` : '',
+        notice: action.quantity > target.product.stock ? `No podés superar el stock de ${target.product.stock} ${target.product.stock === 1 ? 'docena' : 'docenas'}.` : '',
       }
     }
     case 'REMOVE': return { items: state.items.filter((item) => item.product.id !== action.productId), notice: '' }

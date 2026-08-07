@@ -1,6 +1,6 @@
 # Pasta Casa
 
-Primera versión funcional de una tienda web de pastas frescas orientada a clientes de Argentina. Permite explorar seis productos, administrar un carrito persistente y completar un checkout simulado de tres pasos.
+Primera versión funcional de una tienda web de pastas frescas orientada a clientes de Argentina. Permite explorar tres variedades de sorrentinos vendidos por docena, administrar un carrito persistente y completar un checkout simulado de tres pasos.
 
 ## Tecnologías
 

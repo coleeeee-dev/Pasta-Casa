@@ -5,6 +5,7 @@ import type { CustomerData, Order } from '../types'
 import { formatARS } from '../utils/currency'
 import { createOrder } from '../utils/order'
 import { validateCustomer, type CustomerErrors } from '../utils/validation'
+import { formatDozens, formatFullProductName } from '../utils/dozens'
 import { CloseIcon } from './Icons'
 
 const emptyCustomer: CustomerData = { nombre: '', apellido: '', dni: '', email: '', reviewed: false }
@@ -42,7 +43,7 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
       <div className="progress" aria-label={`Paso ${step} de 3`}><span className={step >= 1 ? 'active' : ''}>1 <em>Resumen</em></span><i /><span className={step >= 2 ? 'active' : ''}>2 <em>Datos</em></span><i /><span className={step >= 3 ? 'active' : ''}>3 <em>Listo</em></span></div>
       <div className="checkout-content">
         {step === 1 && <div className="summary-step">
-          <div className="summary-list">{items.map(({ product, quantity }) => <div className="summary-item" key={product.id}><img src={product.imagen} alt="" /><div><strong>{product.nombre}</strong><small>{product.variante} · {quantity} {quantity === 1 ? 'unidad' : 'unidades'}</small></div><span>{formatARS(product.precio * quantity)}</span></div>)}</div>
+          <div className="summary-list">{items.map(({ product, quantity }) => <div className="summary-item" key={product.id}><img src={product.imagen} alt="" /><div><strong>{product.nombre}</strong><small>{product.variante} · {formatDozens(quantity)} · {formatARS(product.precio)} por docena</small></div><span>{formatARS(product.precio * quantity)}</span></div>)}</div>
           <div className="summary-total"><span>Total del pedido</span><strong>{formatARS(total)}</strong></div>
           <div className="checkout-actions"><button className="button button-secondary" onClick={onBackToCart}>← Volver al carrito</button><button className="button button-primary" onClick={() => setStep(2)}>Continuar con mis datos →</button></div>
         </div>}
@@ -61,7 +62,7 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
         {step === 3 && order && preview && <div className="success-step">
           <div className="success-mark">✓</div><p className="eyebrow">Código de pedido</p><h3>{order.code}</h3>
           <p>Gracias, <strong>{order.customer.nombre}</strong>. Preparamos el resumen para <strong>{order.customer.email}</strong>.</p>
-          <div className="final-receipt">{order.items.map(({ product, quantity }) => <div key={product.id}><span>{quantity}× {product.nombre} · {product.variante}</span><strong>{formatARS(product.precio * quantity)}</strong></div>)}<div className="receipt-total"><span>Total</span><strong>{formatARS(order.total)}</strong></div></div>
+          <div className="final-receipt">{order.items.map(({ product, quantity }) => <div key={product.id}><span>{formatDozens(quantity)} × {formatFullProductName(product)}<small>Precio por docena: {formatARS(product.precio)}</small></span><strong>Subtotal: {formatARS(product.precio * quantity)}</strong></div>)}<div className="receipt-total"><span>Total</span><strong>{formatARS(order.total)}</strong></div></div>
           <div className="simulation-note"><strong>Esto es una simulación</strong><p>En la versión final recibirías un correo con el resumen del pedido y las instrucciones para realizar el pago.</p></div>
           <details className="email-preview"><summary>Ver vista previa del correo simulado</summary><div><p><strong>Para:</strong> {preview.recipient}</p><p><strong>Asunto:</strong> {preview.subject}</p><pre>{preview.body}</pre></div></details>
           <button className="button button-primary button-wide" onClick={finish}>Volver al catálogo</button>
