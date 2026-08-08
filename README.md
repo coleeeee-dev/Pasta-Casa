@@ -64,4 +64,4 @@ npm run build
 - `src/context/CartContext.tsx`: carrito persistente, revalidado con el stock recibido de Supabase.
 - `src/tests/fixtures/products.ts`: datos aislados usados solo por las pruebas; no alimentan el catálogo.
 
-El checkout solicita nombre, apellido, celular y método de pago. Registra el pedido mediante `crear_pedido_v3`; el backend calcula precios, totales y estado a partir del método, los productos y las cantidades recibidas. El frontend no inserta directamente en `pedidos` o `detalle_pedido`, no envía correos y no implementa pagos ni QR reales. La confirmación muestra las instrucciones dentro de la propia tienda.
+El checkout solicita nombre, apellido, celular y método de pago. Registra el pedido mediante `crear_pedido_v3`; el backend calcula precios, totales y estado a partir del método, los productos y las cantidades recibidas. El frontend no inserta directamente en `pedidos` o `detalle_pedido` ni envía correos. La confirmación muestra las instrucciones dentro de la propia tienda.

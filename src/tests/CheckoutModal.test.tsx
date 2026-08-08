@@ -92,18 +92,40 @@ describe('CheckoutModal', () => {
     expect(doubles.clearCart).toHaveBeenCalledTimes(1)
   })
 
-  it('muestra instrucciones de transferencia y placeholders pendientes', async () => {
+  it('muestra los datos reales de transferencia sin medios visuales obsoletos', async () => {
     await completeOrder('transferencia')
-    expect(container.textContent).toContain('Tenés 2 horas para realizar el pago')
-    expect(container.textContent).toContain('QR pendiente de configuración')
-    expect(container.textContent).toContain('Datos de transferencia próximamente configurables')
+    expect(container.textContent).toContain('0070089430004269708416')
+    expect(container.textContent).toContain('Ulises Santiago González')
+    expect(container.textContent).not.toContain(String.fromCharCode(81, 82))
   })
 
-  it('muestra instrucciones para coordinar contraentrega', async () => {
+  it('copia el CBU y muestra feedback', async () => {
+    await completeOrder('transferencia')
+    await act(async () => button('Copiar CBU').click())
+    expect(clipboardWrite).toHaveBeenCalledWith('0070089430004269708416')
+    expect(container.textContent).toContain('Copiado')
+  })
+
+  it('crea el enlace de transferencia con el número normalizado y el código real', async () => {
+    await completeOrder('transferencia')
+    const link = [...container.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Enviar comprobante'))
+    expect(link?.href).toContain('wa.me/5493865385579')
+    const message = new URL(link!.href).searchParams.get('text')
+    expect(message).toContain('realicé el pago del pedido PED-77')
+    expect(message).toContain('Adjunto mi comprobante')
+  })
+
+  it('muestra los datos de coordinación y crea el mensaje de contraentrega', async () => {
     await completeOrder('contraentrega')
     expect(container.textContent).toContain('Para coordinar la entrega, comunicate con nosotros por WhatsApp')
-    expect(container.textContent).toContain('Dirección de entrega')
-    expect(container.textContent).toContain('Monto con el que vas a pagar')
+    expect(container.textContent).toContain('Dirección:')
+    expect(container.textContent).toContain('Pago con:')
+    const link = [...container.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Coordinar entrega'))
+    expect(link?.href).toContain('wa.me/5493865385579')
+    const message = new URL(link!.href).searchParams.get('text')
+    expect(message).toContain('coordinar la entrega del pedido PED-77')
+    expect(message).toContain('Dirección:')
+    expect(message).toContain('Pago con:')
   })
 
   it('copia el código del pedido y muestra feedback', async () => {
