@@ -2,12 +2,11 @@ export interface Product {
   id: string
   codigo: string
   nombre: string
-  variante: string
   descripcion: string
   presentacion: string
   precio: number
   stock: number
-  imagen: string
+  imagen: string | null
   activo: boolean
 }
 
@@ -16,24 +15,22 @@ export interface CartItem {
   quantity: number
 }
 
+export type PaymentMethod = 'transferencia' | 'contraentrega'
+export type OrderStatus = 'pendiente_pago' | 'pendiente_coordinacion' | 'pago_confirmado' | 'completado' | 'cancelado'
+
 export interface CustomerData {
   nombre: string
   apellido: string
-  dni: string
-  email: string
-  reviewed: boolean
+  telefono: string
+  metodoPago: PaymentMethod | null
 }
 
 export interface Order {
+  id: string
   code: string
+  status: OrderStatus
+  metodoPago: PaymentMethod
   customer: CustomerData
   items: CartItem[]
   total: number
-  createdAt: string
-}
-
-export interface EmailPreview {
-  subject: string
-  recipient: string
-  body: string
 }

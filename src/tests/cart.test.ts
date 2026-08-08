@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { products } from '../data/products'
+import { products } from './fixtures/products'
 import { cartReducer, getCartTotal, getItemSubtotal, initialCartState } from '../context/cartReducer'
 
 describe('carrito', () => {
-  it('ofrece únicamente las tres variedades vendidas por docena', () => { expect(products).toHaveLength(3); expect(products.every((product) => product.presentacion === 'Presentación: 1 docena')).toBe(true) })
+  it('trabaja con productos vendidos por docena', () => { expect(products.every((product) => product.presentacion === 'Presentación: 1 docena')).toBe(true) })
   it('agrega un producto', () => { const state = cartReducer(initialCartState, { type:'ADD', product:products[0], quantity:2 }); expect(state.items[0].quantity).toBe(2) })
   it('aumenta y disminuye cantidades', () => { let state = cartReducer(initialCartState,{ type:'ADD',product:products[0],quantity:1 }); state=cartReducer(state,{ type:'SET_QUANTITY',productId:products[0].id,quantity:3 }); expect(state.items[0].quantity).toBe(3); state=cartReducer(state,{ type:'SET_QUANTITY',productId:products[0].id,quantity:2 }); expect(state.items[0].quantity).toBe(2) })
   it('evita superar el stock', () => { const state=cartReducer(initialCartState,{ type:'ADD',product:products[0],quantity:products[0].stock+5 }); expect(state.items[0].quantity).toBe(products[0].stock); expect(state.notice).not.toBe('') })

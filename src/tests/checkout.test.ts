@@ -1,13 +1,41 @@
-import { describe, expect, it, vi } from 'vitest'
-import { products } from '../data/products'
-import { simulateOrderEmail } from '../services/emailService'
-import type { Order } from '../types'
-import { generateOrderCode } from '../utils/order'
+import { describe, expect, it } from 'vitest'
+import type { CustomerData, OrderStatus, PaymentMethod } from '../types'
+import { normalizePhone } from '../utils/phone'
+import { formatOrderStatus } from '../utils/payment'
 import { validateCustomer } from '../utils/validation'
 
+const customer = (telefono: string, metodoPago: PaymentMethod | null = 'transferencia'): CustomerData => ({ nombre: 'Ana', apellido: 'Díaz', telefono, metodoPago })
+
 describe('checkout', () => {
-  it('valida un DNI incorrecto', () => { expect(validateCustomer({ nombre:'Ana',apellido:'Díaz',dni:'12A',email:'ana@mail.com',reviewed:true }).dni).toBeDefined() })
-  it('valida un correo incorrecto', () => { expect(validateCustomer({ nombre:'Ana',apellido:'Díaz',dni:'12345678',email:'ana-mail',reviewed:true }).email).toBeDefined() })
-  it('genera un código de pedido reproducible', () => { expect(generateOrderCode(new Date(2026,7,6),()=>0.0156)).toMatch(/^PED-20260806-[0-9A-F]{4}$/) })
-  it('genera la vista previa por docenas sin solicitudes externas', () => { const fetchSpy=vi.spyOn(globalThis,'fetch'); const order:Order={ code:'PED-20260806-A3F7',customer:{nombre:'Ana',apellido:'Díaz',dni:'12345678',email:'ana@mail.com',reviewed:true},items:[{product:products[0],quantity:2}],total:products[0].precio*2,createdAt:new Date().toISOString() }; const email=simulateOrderEmail(order); expect(email.recipient).toBe('ana@mail.com'); expect(email.subject).toContain(order.code); expect(email.body).toContain('2 docenas × Sorrentinos de jamón y queso'); expect(email.body).toContain('Precio por docena:'); expect(email.body).toContain('Subtotal:'); expect(email.body).toContain('SIMULACIÓN'); expect(fetchSpy).not.toHaveBeenCalled(); fetchSpy.mockRestore() })
+  it('requiere un número de celular', () => {
+    expect(validateCustomer(customer('')).telefono).toBe('Ingresá tu número de celular.')
+  })
+
+  it('rechaza un número de celular inválido', () => {
+    expect(validateCustomer(customer('123-45')).telefono).toContain('entre 8 y 15 dígitos')
+    expect(validateCustomer(customer('11 ABCD 5678')).telefono).toContain('entre 8 y 15 dígitos')
+  })
+
+  it.each([
+    ['11 1234 5678', '1112345678'],
+    ['+54 9 11 1234 5678', '5491112345678'],
+    ['(011) 1234-5678', '01112345678'],
+  ])('normaliza %s antes de enviarlo', (input, expected) => {
+    expect(normalizePhone(input)).toBe(expected)
+    expect(validateCustomer(customer(input)).telefono).toBeUndefined()
+  })
+
+  it('requiere elegir un método de pago', () => {
+    expect(validateCustomer(customer('11 1234 5678', null)).metodoPago).toBe('Elegí un método de pago para continuar.')
+  })
+
+  it.each<[OrderStatus, string]>([
+    ['pendiente_pago', 'Pendiente de pago'],
+    ['pendiente_coordinacion', 'Pendiente de coordinación'],
+    ['pago_confirmado', 'Pago confirmado'],
+    ['completado', 'Completado'],
+    ['cancelado', 'Cancelado'],
+  ])('muestra %s como %s', (status, label) => {
+    expect(formatOrderStatus(status)).toBe(label)
+  })
 })

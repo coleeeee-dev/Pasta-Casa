@@ -5,9 +5,9 @@ import { formatDozens } from '../utils/dozens'
 interface Props { item: CartItem; onSet: (quantity: number) => void; onRemove: () => void }
 export function CartLine({ item, onSet, onRemove }: Props) {
   return <div className="cart-line">
-    <img src={item.product.imagen} alt="" />
+    {item.product.imagen ? <img src={item.product.imagen} alt="" /> : <div className="cart-line-image-placeholder" aria-hidden="true">PC</div>}
     <div className="cart-line-main">
-      <div className="cart-line-title"><div><strong>{item.product.nombre}</strong><small>{item.product.variante} · {formatDozens(item.quantity)}</small></div><button className="text-button danger" onClick={onRemove}>Eliminar</button></div>
+      <div className="cart-line-title"><div><strong>{item.product.nombre}</strong><small>{formatDozens(item.quantity)}</small></div><button className="text-button danger" onClick={onRemove}>Eliminar</button></div>
       <div className="cart-line-bottom">
         <div className="stepper" aria-label={`Cantidad de ${item.product.nombre}`}>
           <button onClick={() => onSet(item.quantity - 1)} aria-label="Disminuir cantidad">−</button><span>{item.quantity}</span>

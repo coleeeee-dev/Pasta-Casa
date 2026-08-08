@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { ProductCard } from '../components/ProductCard'
-import { products } from '../data/products'
+import { useProducts } from '../context/ProductContext'
 
 export function HomePage() {
   const [message, setMessage] = useState('')
+  const { products, loading, error, reloadProducts } = useProducts()
   const notify = () => { setMessage('Producto agregado a tu pedido'); window.setTimeout(() => setMessage(''), 2300) }
   return <main>
     {message && <div className="toast" role="status">✓ {message}</div>}
@@ -13,7 +14,10 @@ export function HomePage() {
     </section>
     <section className="catalog-section" id="catalogo">
       <div className="section-heading"><div><p className="eyebrow">Elegí tu favorita</p><h2>La mesa está servida</h2></div><p>Todos nuestros sorrentinos se venden por docena. La cantidad elegida indica cuántas docenas querés pedir.</p></div>
-      <div className="product-grid">{products.filter((p) => p.activo).map((product) => <ProductCard key={product.id} product={product} onAdded={notify} />)}</div>
+      {loading ? <div className="catalog-status" role="status" aria-live="polite"><span className="catalog-spinner" aria-hidden="true" /><h3>Cargando el catálogo…</h3><p>Estamos buscando las pastas disponibles.</p></div>
+        : error ? <div className="catalog-status catalog-error" role="alert"><h3>No pudimos cargar el catálogo</h3><p>{error}</p><button className="button button-secondary" onClick={reloadProducts}>Reintentar</button></div>
+          : products.length === 0 ? <div className="catalog-status"><h3>No hay productos disponibles</h3><p>En este momento no tenemos productos activos en el catálogo.</p></div>
+            : <div className="product-grid">{products.map((product) => <ProductCard key={product.id} product={product} onAdded={notify} />)}</div>}
     </section>
     <section className="promise-band"><div><span className="promise-number">01</span><h3>Elegís</h3><p>Armá tu pedido con las pastas que más te gusten.</p></div><div><span className="promise-number">02</span><h3>Confirmás</h3><p>Revisá las cantidades y completá tus datos.</p></div><div><span className="promise-number">03</span><h3>Disfrutás</h3><p>En la versión final coordinaremos pago y entrega.</p></div></section>
   </main>

@@ -3,6 +3,7 @@ import type { CartItem, Product } from '../types'
 export interface CartState { items: CartItem[]; notice: string }
 export type CartAction =
   | { type: 'ADD'; product: Product; quantity: number }
+  | { type: 'HYDRATE'; items: CartItem[] }
   | { type: 'SET_QUANTITY'; productId: string; quantity: number }
   | { type: 'REMOVE'; productId: string }
   | { type: 'CLEAR' }
@@ -12,7 +13,11 @@ export const initialCartState: CartState = { items: [], notice: '' }
 
 export function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
+    case 'HYDRATE': return { items: action.items, notice: '' }
     case 'ADD': {
+      if (action.product.stock <= 0) {
+        return { ...state, notice: 'Este producto no tiene stock disponible.' }
+      }
       const existing = state.items.find((item) => item.product.id === action.product.id)
       const current = existing?.quantity ?? 0
       const requested = current + Math.max(1, action.quantity)

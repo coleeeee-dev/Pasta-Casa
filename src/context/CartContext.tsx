@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react'
 import type { Product } from '../types'
-import { products } from '../data/products'
 import { cartReducer, getCartCount, getCartTotal, initialCartState, type CartState } from './cartReducer'
+import { useProducts } from './ProductContext'
 
 const STORAGE_KEY = 'pasta-casa-cart'
 
@@ -16,14 +16,14 @@ interface CartContextValue extends CartState {
 
 const CartContext = createContext<CartContextValue | null>(null)
 
-function restoreCart(): CartState {
+function restoreCart(products: Product[]): CartState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     const storedItems = raw ? JSON.parse(raw) : []
     if (!Array.isArray(storedItems)) return initialCartState
     const items = storedItems.flatMap((item) => {
       const product = products.find((candidate) => candidate.id === item?.product?.id && candidate.activo)
-      if (!product || !Number.isFinite(item?.quantity) || item.quantity < 1) return []
+      if (!product || product.stock < 1 || !Number.isFinite(item?.quantity) || item.quantity < 1) return []
       return [{ product, quantity: Math.min(Math.floor(item.quantity), product.stock) }]
     })
     return { items, notice: '' }
@@ -31,8 +31,19 @@ function restoreCart(): CartState {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, initialCartState, restoreCart)
-  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items)) }, [state.items])
+  const { products, loading, error } = useProducts()
+  const [state, dispatch] = useReducer(cartReducer, initialCartState)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    if (hydrated || loading || error) return
+    dispatch({ type: 'HYDRATE', items: restoreCart(products).items })
+    setHydrated(true)
+  }, [products, loading, error, hydrated])
+
+  useEffect(() => {
+    if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items))
+  }, [state.items, hydrated])
   const value = useMemo<CartContextValue>(() => ({
     ...state, total: getCartTotal(state.items), count: getCartCount(state.items),
     addItem: (product, quantity) => dispatch({ type: 'ADD', product, quantity }),

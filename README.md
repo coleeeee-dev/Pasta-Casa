@@ -1,42 +1,67 @@
 # Pasta Casa
 
-Primera versión funcional de una tienda web de pastas frescas orientada a clientes de Argentina. Permite explorar tres variedades de sorrentinos vendidos por docena, administrar un carrito persistente y completar un checkout simulado de tres pasos.
+Tienda web de pastas frescas para clientes de Argentina. El catálogo se obtiene desde la tabla `public.productos` de Supabase y permite administrar un carrito persistente y completar un checkout simulado de tres pasos.
 
 ## Tecnologías
 
-- React 19, TypeScript y Vite
+- React 18, TypeScript y Vite
+- Supabase (`@supabase/supabase-js`)
 - React Router
 - CSS propio y responsive
 - Vitest
 
-## Uso local
+## Configuración local
 
-```bash
-npm install
-npm run dev
-```
+1. Instalá las dependencias:
 
-Vite mostrará la dirección local para abrir el sitio en el navegador.
+   ```bash
+   npm install
+   ```
+
+2. Creá un archivo `.env.local` en la raíz del proyecto:
+
+   ```dotenv
+   VITE_SUPABASE_URL=https://tu-proyecto.supabase.co
+   VITE_SUPABASE_ANON_KEY=tu-clave-anon
+   ```
+
+   `VITE_SUPABASE_URL` debe ser la URL base del proyecto, sin `/rest/v1`. Usá únicamente la clave pública `anon`/publishable. Nunca agregues una `service_role`, Secret key u otra credencial privada al frontend. Los archivos `*.local` están ignorados por Git.
+
+3. Iniciá Vite:
+
+   ```bash
+   npm run dev
+   ```
+
+## Catálogo en Supabase
+
+La aplicación consulta `public.productos`, filtra por `activo = true` y ordena por `id` ascendente. `stock_docenas` representa la cantidad de docenas disponibles y limita tanto el selector del catálogo como las cantidades del carrito.
+
+El rol público usado por la clave `anon` debe tener permiso de lectura sobre la tabla y, si RLS está habilitado, una política `SELECT` adecuada. El frontend no crea ni modifica productos, pedidos o detalles de pedido, y no implementa autenticación.
+
+## Netlify
+
+El build y los redirects para SPA permanecen configurados en `netlify.toml`. En **Site configuration → Environment variables** configurá también:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Después de crear o cambiar esas variables, ejecutá un nuevo deploy para que Vite las incorpore al build.
 
 ## Pruebas y build
 
 ```bash
-npm run test
+npm test
 npm run build
 ```
 
-## Contenido y estructura
+## Estructura relevante
 
-Los productos se editan en `src/data/products.ts`. Sus ilustraciones locales están en `public/images`. La lógica del carrito vive en `src/context`, las validaciones y generación de pedidos en `src/utils`, y la simulación del correo en `src/services/emailService.ts`.
+- `src/lib/supabase.ts`: cliente público y reutilizable de Supabase.
+- `src/services/productService.ts`: lectura y adaptación de productos activos.
+- `src/services/orderService.ts`: creación de pedidos mediante la función RPC `crear_pedido_v3`.
+- `src/context/ProductContext.tsx`: estados de carga, error y catálogo.
+- `src/context/CartContext.tsx`: carrito persistente, revalidado con el stock recibido de Supabase.
+- `src/tests/fixtures/products.ts`: datos aislados usados solo por las pruebas; no alimentan el catálogo.
 
-## Alcance simulado
-
-El prototipo no envía correos, no hace pagos ni solicitudes HTTP y no utiliza backend ni base de datos. Solo el carrito se guarda en `localStorage`; el nombre, apellido, DNI y correo permanecen en memoria durante el checkout y se descartan al finalizar o recargar.
-
-## Próximas etapas posibles
-
-- Incorporar datos, fotografías y canales reales del emprendimiento.
-- Definir logística, zonas y turnos de entrega.
-- Agregar un backend seguro para pedidos e inventario.
-- Integrar un proveedor de pagos y correo transaccional, luego de definir requisitos legales y de privacidad.
-- Sumar pruebas de interfaz y accesibilidad automatizadas.
+El checkout solicita nombre, apellido, celular y método de pago. Registra el pedido mediante `crear_pedido_v3`; el backend calcula precios, totales y estado a partir del método, los productos y las cantidades recibidas. El frontend no inserta directamente en `pedidos` o `detalle_pedido`, no envía correos y no implementa pagos ni QR reales. La confirmación muestra las instrucciones dentro de la propia tienda.
