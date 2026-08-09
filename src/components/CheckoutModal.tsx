@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { useCart } from '../context/CartContext'
+import { useProducts } from '../context/ProductContext'
 import { createOrder, CreateOrderError } from '../services/orderService'
 import type { CustomerData, Order, PaymentMethod } from '../types'
 import { formatARS } from '../utils/currency'
@@ -14,6 +15,7 @@ interface Props { open: boolean; onClose: () => void; onBackToCart: () => void; 
 
 export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props) {
   const { items, total, clearCart } = useCart()
+  const { reloadProducts } = useProducts()
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [customer, setCustomer] = useState(emptyCustomer)
   const [errors, setErrors] = useState<CustomerErrors>({})
@@ -51,7 +53,11 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
       })
       clearCart()
       setStep(3)
+      void reloadProducts()
     } catch (error) {
+      if (error instanceof CreateOrderError && error.reason === 'stock') {
+        void reloadProducts()
+      }
       setSubmitError(error instanceof CreateOrderError ? error.message : 'No pudimos crear el pedido. Intentá nuevamente.')
     } finally {
       submittingRef.current = false

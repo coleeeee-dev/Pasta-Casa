@@ -6,7 +6,7 @@ interface ProductContextValue {
   products: Product[]
   loading: boolean
   error: string | null
-  reloadProducts: () => void
+  reloadProducts: () => Promise<void>
 }
 
 const ProductContext = createContext<ProductContextValue | null>(null)
@@ -17,14 +17,14 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
 
-  const loadProducts = useCallback(() => {
+  const loadProducts = useCallback(async () => {
     controllerRef.current?.abort()
     const controller = new AbortController()
     controllerRef.current = controller
     setLoading(true)
     setError(null)
 
-    void getActiveProducts(controller.signal)
+    await getActiveProducts(controller.signal)
       .then((nextProducts) => {
         if (!controller.signal.aborted) setProducts(nextProducts)
       })
@@ -40,7 +40,7 @@ export function ProductProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    loadProducts()
+    void loadProducts()
     return () => controllerRef.current?.abort()
   }, [loadProducts])
 

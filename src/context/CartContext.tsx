@@ -44,6 +44,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hydrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items))
   }, [state.items, hydrated])
+
+  useEffect(() => {
+    if (!hydrated || loading || error) return
+    dispatch({ type: 'SYNC_PRODUCTS', products })
+  }, [error, hydrated, loading, products])
   const value = useMemo<CartContextValue>(() => ({
     ...state, total: getCartTotal(state.items), count: getCartCount(state.items),
     addItem: (product, quantity) => dispatch({ type: 'ADD', product, quantity }),

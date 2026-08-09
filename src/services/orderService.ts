@@ -11,6 +11,7 @@ export interface CreatedOrder {
   total: number
   estado: OrderStatus
   metodoPago: PaymentMethod
+  stockReservado: true
 }
 
 interface CreateOrderRow {
@@ -19,6 +20,7 @@ interface CreateOrderRow {
   total?: unknown
   estado?: unknown
   metodo_pago?: unknown
+  stock_reservado?: unknown
 }
 
 export class CreateOrderError extends Error {
@@ -53,11 +55,11 @@ export function parseCreatedOrder(data: unknown): CreatedOrder {
   const total = Number(row?.total)
   const pedidoId = row?.pedido_id
 
-  if (!row || (typeof pedidoId !== 'string' && typeof pedidoId !== 'number') || !String(pedidoId) || typeof row.codigo !== 'string' || !row.codigo || !Number.isFinite(total) || !isOrderStatus(row.estado) || !isPaymentMethod(row.metodo_pago)) {
+  if (!row || (typeof pedidoId !== 'string' && typeof pedidoId !== 'number') || !String(pedidoId) || typeof row.codigo !== 'string' || !row.codigo || !Number.isFinite(total) || !isOrderStatus(row.estado) || !isPaymentMethod(row.metodo_pago) || row.stock_reservado !== true) {
     throw new CreateOrderError('Supabase devolvió una respuesta de pedido incompleta.')
   }
 
-  return { pedidoId: String(pedidoId), codigo: row.codigo, total, estado: row.estado, metodoPago: row.metodo_pago }
+  return { pedidoId: String(pedidoId), codigo: row.codigo, total, estado: row.estado, metodoPago: row.metodo_pago, stockReservado: true }
 }
 
 function getErrorText(error: { message?: string; details?: string; hint?: string }): string {
@@ -69,7 +71,7 @@ export async function createOrder(customer: CustomerData, items: CartItem[]): Pr
   if (!isPaymentMethod(customer.metodoPago)) throw new CreateOrderError('Elegí un método de pago válido para continuar.', 'payment_method')
   if (!isValidPhone(customer.telefono)) throw new CreateOrderError('Ingresá un número de celular válido.', 'phone')
 
-  const { data, error } = await supabase.rpc('crear_pedido_v3', {
+  const { data, error } = await supabase.rpc('crear_pedido_v4', {
     p_nombre: customer.nombre,
     p_apellido: customer.apellido,
     p_telefono: normalizePhone(customer.telefono),

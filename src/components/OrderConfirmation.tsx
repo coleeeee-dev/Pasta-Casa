@@ -39,6 +39,8 @@ export function OrderConfirmation({ order, onFinish }: Props) {
       <div className="receipt-total"><span>Total</span><strong>{formatARS(order.total)}</strong></div>
     </div>
 
+    <p className="order-reservation-note">Los productos de tu pedido quedaron reservados.</p>
+
     {order.metodoPago === 'transferencia'
       ? <TransferInstructions order={order} copiedField={copiedField} onCopy={copyValue} />
       : <CashOnDeliveryInstructions code={order.code} />}

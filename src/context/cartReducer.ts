@@ -4,6 +4,7 @@ export interface CartState { items: CartItem[]; notice: string }
 export type CartAction =
   | { type: 'ADD'; product: Product; quantity: number }
   | { type: 'HYDRATE'; items: CartItem[] }
+  | { type: 'SYNC_PRODUCTS'; products: Product[] }
   | { type: 'SET_QUANTITY'; productId: string; quantity: number }
   | { type: 'REMOVE'; productId: string }
   | { type: 'CLEAR' }
@@ -14,6 +15,26 @@ export const initialCartState: CartState = { items: [], notice: '' }
 export function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
     case 'HYDRATE': return { items: action.items, notice: '' }
+    case 'SYNC_PRODUCTS': {
+      const productsById = new Map(action.products.map((product) => [product.id, product]))
+      let adjusted = false
+      const items = state.items.flatMap((item) => {
+        const product = productsById.get(item.product.id)
+        if (!product || !product.activo || product.stock < 1) {
+          adjusted = true
+          return []
+        }
+
+        const quantity = Math.min(item.quantity, product.stock)
+        if (quantity !== item.quantity) adjusted = true
+        return [{ product, quantity }]
+      })
+
+      return {
+        items,
+        notice: adjusted ? 'Actualizamos tu carrito según el stock disponible.' : state.notice,
+      }
+    }
     case 'ADD': {
       if (action.product.stock <= 0) {
         return { ...state, notice: 'Este producto no tiene stock disponible.' }

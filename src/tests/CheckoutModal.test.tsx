@@ -2,14 +2,20 @@ import { act, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CheckoutModal } from '../components/CheckoutModal'
+import { CreateOrderError } from '../services/orderService'
 import type { CartItem, PaymentMethod } from '../types'
 import { products } from './fixtures/products'
 
-const doubles = vi.hoisted(() => ({ createOrder: vi.fn(), clearCart: vi.fn(), cart: { items: [] as CartItem[], total: 0 } }))
+const doubles = vi.hoisted(() => ({ createOrder: vi.fn(), clearCart: vi.fn(), reloadProducts: vi.fn(), cart: { items: [] as CartItem[], total: 0 } }))
 
 vi.mock('../context/CartContext', () => ({ useCart: () => ({ items: doubles.cart.items, total: doubles.cart.total, clearCart: doubles.clearCart }) }))
+vi.mock('../context/ProductContext', () => ({ useProducts: () => ({ reloadProducts: doubles.reloadProducts }) }))
 vi.mock('../services/orderService', () => {
-  class MockCreateOrderError extends Error {}
+  class MockCreateOrderError extends Error {
+    constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'unknown' = 'unknown') {
+      super(message)
+    }
+  }
   return { createOrder: doubles.createOrder, CreateOrderError: MockCreateOrderError }
 })
 
@@ -45,7 +51,7 @@ function submit() {
   form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
 }
 async function completeOrder(method: PaymentMethod) {
-  doubles.createOrder.mockResolvedValue({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: method === 'transferencia' ? 'pendiente_pago' : 'pendiente_coordinacion', metodoPago: method })
+  doubles.createOrder.mockResolvedValue({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: method === 'transferencia' ? 'pendiente_pago' : 'pendiente_coordinacion', metodoPago: method, stockReservado: true })
   fillCustomer(method)
   await act(async () => submit())
 }
@@ -58,6 +64,8 @@ beforeEach(() => {
   doubles.cart.total = products[0].precio * 2
   doubles.createOrder.mockReset()
   doubles.clearCart.mockReset()
+  doubles.reloadProducts.mockReset()
+  doubles.reloadProducts.mockResolvedValue(undefined)
   clipboardWrite = vi.fn().mockResolvedValue(undefined)
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: clipboardWrite } })
   render(<CheckoutModal open onClose={vi.fn()} onBackToCart={vi.fn()} onFinished={vi.fn()} />)
@@ -82,18 +90,31 @@ describe('CheckoutModal', () => {
     expect(button('Reintentar pedido')).toBeDefined()
   })
 
+  it('refresca productos y conserva el carrito cuando falta stock', async () => {
+    doubles.createOrder.mockRejectedValue(new CreateOrderError('No hay stock suficiente.', 'stock'))
+    fillCustomer('contraentrega')
+    await act(async () => submit())
+    expect(doubles.clearCart).not.toHaveBeenCalled()
+    expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('No hay stock suficiente')
+    expect(container.querySelector<HTMLInputElement>('#telefono')?.value).toBe('+54 9 11 1234 5678')
+  })
+
   it('bloquea llamadas duplicadas mientras el RPC está pendiente', async () => {
     let resolveOrder!: (value: unknown) => void
     doubles.createOrder.mockReturnValue(new Promise((resolve) => { resolveOrder = resolve }))
     fillCustomer('transferencia')
     act(() => { submit(); submit() })
     expect(doubles.createOrder).toHaveBeenCalledTimes(1)
-    await act(async () => { resolveOrder({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: 'pendiente_pago', metodoPago: 'transferencia' }); await Promise.resolve() })
+    await act(async () => { resolveOrder({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: 'pendiente_pago', metodoPago: 'transferencia', stockReservado: true }); await Promise.resolve() })
     expect(doubles.clearCart).toHaveBeenCalledTimes(1)
+    expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
   })
 
   it('muestra los datos reales de transferencia sin medios visuales obsoletos', async () => {
     await completeOrder('transferencia')
+    expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('Los productos de tu pedido quedaron reservados')
     expect(container.textContent).toContain('0070089430004269708416')
     expect(container.textContent).toContain('Ulises Santiago González')
     expect(container.textContent).not.toContain(String.fromCharCode(81, 82))
