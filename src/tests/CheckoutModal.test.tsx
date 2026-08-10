@@ -3,13 +3,36 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CheckoutModal } from '../components/CheckoutModal'
 import { CreateOrderError } from '../services/orderService'
-import type { CartItem, PaymentMethod } from '../types'
+import type { CartItem, PaymentMethod, PublicBusinessConfig } from '../types'
 import { products } from './fixtures/products'
 
-const doubles = vi.hoisted(() => ({ createOrder: vi.fn(), clearCart: vi.fn(), reloadProducts: vi.fn(), cart: { items: [] as CartItem[], total: 0 } }))
+const publicConfig: PublicBusinessConfig = {
+  id: 1,
+  nombre_negocio: 'Negocio desde Supabase',
+  whatsapp: '+54 9 11 5555 0101',
+  cbu: 'CBU-DESDE-SUPABASE',
+  identificacion_fiscal: 'FISCAL-DESDE-SUPABASE',
+  titular: 'Titular desde Supabase',
+  horas_limite_pago: 6,
+  updated_at: '2026-08-09T00:00:00Z',
+}
+
+const doubles = vi.hoisted(() => ({
+  createOrder: vi.fn(),
+  clearCart: vi.fn(),
+  reloadProducts: vi.fn(),
+  refreshConfig: vi.fn(),
+  business: { config: null as PublicBusinessConfig | null, loading: false, error: null as string | null },
+  cart: { items: [] as CartItem[], total: 0 },
+}))
 
 vi.mock('../context/CartContext', () => ({ useCart: () => ({ items: doubles.cart.items, total: doubles.cart.total, clearCart: doubles.clearCart }) }))
 vi.mock('../context/ProductContext', () => ({ useProducts: () => ({ reloadProducts: doubles.reloadProducts }) }))
+vi.mock('../context/BusinessConfigContext', () => ({ useBusinessConfig: () => ({
+  ...doubles.business,
+  success: Boolean(doubles.business.config) && !doubles.business.loading && !doubles.business.error,
+  refreshConfig: doubles.refreshConfig,
+}) }))
 vi.mock('../services/orderService', () => {
   class MockCreateOrderError extends Error {
     constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'unknown' = 'unknown') {
@@ -66,6 +89,11 @@ beforeEach(() => {
   doubles.clearCart.mockReset()
   doubles.reloadProducts.mockReset()
   doubles.reloadProducts.mockResolvedValue(undefined)
+  doubles.refreshConfig.mockReset()
+  doubles.refreshConfig.mockResolvedValue(undefined)
+  doubles.business.config = publicConfig
+  doubles.business.loading = false
+  doubles.business.error = null
   clipboardWrite = vi.fn().mockResolvedValue(undefined)
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: clipboardWrite } })
   render(<CheckoutModal open onClose={vi.fn()} onBackToCart={vi.fn()} onFinished={vi.fn()} />)
@@ -115,22 +143,23 @@ describe('CheckoutModal', () => {
     await completeOrder('transferencia')
     expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
     expect(container.textContent).toContain('Los productos de tu pedido quedaron reservados')
-    expect(container.textContent).toContain('0070089430004269708416')
-    expect(container.textContent).toContain('Ulises Santiago González')
+    expect(container.textContent).toContain(publicConfig.cbu)
+    expect(container.textContent).toContain(publicConfig.titular)
+    expect(container.textContent).toContain(`Tenés ${publicConfig.horas_limite_pago} horas`)
     expect(container.textContent).not.toContain(String.fromCharCode(81, 82))
   })
 
   it('copia el CBU y muestra feedback', async () => {
     await completeOrder('transferencia')
     await act(async () => button('Copiar CBU').click())
-    expect(clipboardWrite).toHaveBeenCalledWith('0070089430004269708416')
+    expect(clipboardWrite).toHaveBeenCalledWith(publicConfig.cbu)
     expect(container.textContent).toContain('Copiado')
   })
 
   it('crea el enlace de transferencia con el número normalizado y el código real', async () => {
     await completeOrder('transferencia')
     const link = [...container.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Enviar comprobante'))
-    expect(link?.href).toContain('wa.me/5493865385579')
+    expect(link?.href).toContain('wa.me/5491155550101')
     const message = new URL(link!.href).searchParams.get('text')
     expect(message).toContain('realicé el pago del pedido PED-77')
     expect(message).toContain('Adjunto mi comprobante')
@@ -142,7 +171,7 @@ describe('CheckoutModal', () => {
     expect(container.textContent).toContain('Dirección:')
     expect(container.textContent).toContain('Pago con:')
     const link = [...container.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Coordinar entrega'))
-    expect(link?.href).toContain('wa.me/5493865385579')
+    expect(link?.href).toContain('wa.me/5491155550101')
     const message = new URL(link!.href).searchParams.get('text')
     expect(message).toContain('coordinar la entrega del pedido PED-77')
     expect(message).toContain('Dirección:')
@@ -154,5 +183,16 @@ describe('CheckoutModal', () => {
     await act(async () => button('Copiar código').click())
     expect(clipboardWrite).toHaveBeenCalledWith('PED-77')
     expect(container.textContent).toContain('Código copiado')
+  })
+
+  it('no muestra datos bancarios cuando falla la configuración y permite reintentar', async () => {
+    doubles.business.config = null
+    doubles.business.error = 'fallo de configuración'
+    await completeOrder('transferencia')
+    expect(container.textContent).toContain('No pudimos cargar los datos de pago')
+    expect(container.textContent).not.toContain(publicConfig.cbu)
+    expect(container.querySelector('a[href*="wa.me"]')).toBeNull()
+    await act(async () => button('Reintentar').click())
+    expect(doubles.refreshConfig).toHaveBeenCalledTimes(1)
   })
 })

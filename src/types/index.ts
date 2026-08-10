@@ -34,3 +34,14 @@ export interface Order {
   items: CartItem[]
   total: number
 }
+
+export interface PublicBusinessConfig {
+  id: number
+  nombre_negocio: string
+  whatsapp: string
+  cbu: string
+  identificacion_fiscal: string
+  titular: string
+  horas_limite_pago: number
+  updated_at: string
+}

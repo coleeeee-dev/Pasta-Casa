@@ -59,8 +59,10 @@ npm run build
 
 - `src/lib/supabase.ts`: cliente público y reutilizable de Supabase.
 - `src/services/productService.ts`: lectura y adaptación de productos activos.
+- `src/services/configService.ts`: lectura de la fila pública `configuracion_publica` con `id = 1`.
 - `src/services/orderService.ts`: creación de pedidos mediante la función RPC `crear_pedido_v4`.
 - `src/context/ProductContext.tsx`: estados de carga, error y catálogo.
+- `src/context/BusinessConfigContext.tsx`: carga centralizada y reintento de los datos públicos del negocio.
 - `src/context/CartContext.tsx`: carrito persistente, revalidado con el stock recibido de Supabase.
 - `src/tests/fixtures/products.ts`: datos aislados usados solo por las pruebas; no alimentan el catálogo.
 

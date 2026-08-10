@@ -1,11 +1,9 @@
-import { businessConfig } from '../config/business'
-
-export function getWhatsAppUrlNumber(): string {
-  return businessConfig.whatsapp.displayNumber.replace(/\D/g, '')
+export function getWhatsAppUrlNumber(whatsapp: string): string {
+  return whatsapp.replace(/\D/g, '')
 }
 
-export function buildWhatsAppUrl(message: string): string {
-  return `https://wa.me/${getWhatsAppUrlNumber()}?text=${encodeURIComponent(message)}`
+export function buildWhatsAppUrl(whatsapp: string, message: string): string {
+  return `https://wa.me/${getWhatsAppUrlNumber(whatsapp)}?text=${encodeURIComponent(message)}`
 }
 
 export function getTransferWhatsAppMessage(orderCode: string): string {

@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import { useBusinessConfig } from '../context/BusinessConfigContext'
 import { CartIcon, MenuIcon } from './Icons'
+import { BusinessLogo } from './BusinessLogo'
 
 export function Header({ onCartOpen }: { onCartOpen: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const { count } = useCart()
+  const { config, loading } = useBusinessConfig()
+  const businessName = config?.nombre_negocio ?? (loading ? 'Cargando…' : 'Tienda de pastas')
   const closeMenu = () => setMenuOpen(false)
   return <header className="site-header">
     <div className="header-inner">
-      <NavLink className="brand" to="/" onClick={closeMenu} aria-label="Pasta Casa, ir al inicio">
-        <span className="brand-mark">P</span><span><strong>Pasta Casa</strong><small>Pastas frescas</small></span>
+      <NavLink className="brand header-brand" to="/" onClick={closeMenu} aria-label={`${businessName}, ir al inicio`}>
+        <BusinessLogo className="header-logo" /><span className="brand-copy"><strong>{businessName}</strong><small>Pastas caseras</small></span>
       </NavLink>
       <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}>
         <MenuIcon open={menuOpen} />

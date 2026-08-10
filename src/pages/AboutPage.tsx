@@ -1,8 +1,35 @@
+import emprendimientoPhoto from '../assets/branding/cara-emprendimiento.jpeg'
+import { useBusinessConfig } from '../context/BusinessConfigContext'
+
+const aboutContent = {
+  eyebrow: 'DETRÁS DE CADA PEDIDO',
+  title: 'Hola, soy Ulises González',
+  introduction: 'Empecé este emprendimiento con la idea de preparar pastas caseras en pequeñas producciones y ofrecer una atención mucho más cercana y directa.',
+  paragraphs: [
+    'Me encargo personalmente de preparar y coordinar los pedidos, buscando que cada persona pueda disfrutar unas buenas pastas caseras para compartir en casa.',
+    'Trabajamos con cantidades limitadas y cada pedido se coordina de manera personal.',
+  ],
+}
+
 export function AboutPage() {
-  const values = [
-    ['01', 'Elaboración artesanal', 'Cada pieza respeta los tiempos y gestos de una cocina de verdad.'],
-    ['02', 'Ingredientes seleccionados', 'Elegimos materias primas simples, frescas y de buena procedencia.'],
-    ['03', 'Producción local', 'Hacemos cerca, en tandas pequeñas, para llegar siempre frescos a tu mesa.'],
-  ]
-  return <main className="inner-page"><section className="page-hero"><p className="eyebrow">Nuestra cocina</p><h1>Una historia que se amasa <em>todos los días.</em></h1><p>Próximamente vamos a compartir la historia del emprendimiento, las manos detrás de cada receta y el camino que nos trajo hasta acá.</p></section><section className="story-section"><div className="story-photo"><div className="story-placeholder"><span>Fotografía del obrador</span><small>Próximamente</small></div></div><div className="story-copy"><p className="eyebrow">Desde la primera receta</p><h2>La cocina como punto de encuentro</h2><p>Pasta Casa nace de una idea sencilla: recuperar el placer de sentarse a la mesa alrededor de un plato rico, cercano y hecho con dedicación.</p><p>Este espacio crecerá con nuestra historia, nuestros procesos y las personas que hacen posible cada tanda.</p></div></section><section className="values-grid">{values.map(([number, title, copy]) => <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</section></main>
+  const { config } = useBusinessConfig()
+  const businessName = config?.nombre_negocio ?? 'este emprendimiento'
+
+  return <main className="inner-page about-page">
+    <header className="page-hero about-hero">
+      <h1>Quiénes somos</h1>
+    </header>
+
+    <section className="about-feature" aria-labelledby="about-title">
+      <div className="about-photo-wrap">
+        <img src={emprendimientoPhoto} alt="Emprendimiento de pastas caseras" />
+      </div>
+      <div className="about-copy">
+        <p className="eyebrow">{aboutContent.eyebrow}</p>
+        <h2 id="about-title">{aboutContent.title}</h2>
+        <p>Soy quien está detrás de {businessName}. {aboutContent.introduction}</p>
+        {aboutContent.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+      </div>
+    </section>
+  </main>
 }
