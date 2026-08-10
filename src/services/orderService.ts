@@ -24,7 +24,7 @@ interface CreateOrderRow {
 }
 
 export class CreateOrderError extends Error {
-  constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'unknown' = 'unknown') {
+  constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
     super(message)
     this.name = 'CreateOrderError'
   }
@@ -66,21 +66,28 @@ function getErrorText(error: { message?: string; details?: string; hint?: string
   return `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLocaleLowerCase('es-AR')
 }
 
-export async function createOrder(customer: CustomerData, items: CartItem[]): Promise<CreatedOrder> {
+export async function createOrder(customer: CustomerData, items: CartItem[], consentimientoTransferencia: boolean): Promise<CreatedOrder> {
   if (items.length === 0) throw new CreateOrderError('El carrito está vacío.')
   if (!isPaymentMethod(customer.metodoPago)) throw new CreateOrderError('Elegí un método de pago válido para continuar.', 'payment_method')
   if (!isValidPhone(customer.telefono)) throw new CreateOrderError('Ingresá un número de celular válido.', 'phone')
+  if (consentimientoTransferencia !== true) {
+    throw new CreateOrderError('Debe autorizar el tratamiento indicado para poder registrar el pedido.', 'consent')
+  }
 
-  const { data, error } = await supabase.rpc('crear_pedido_v4', {
+  const { data, error } = await supabase.rpc('crear_pedido_v5', {
     p_nombre: customer.nombre,
     p_apellido: customer.apellido,
     p_telefono: normalizePhone(customer.telefono),
     p_metodo_pago: customer.metodoPago,
     p_items: buildOrderItems(items),
+    p_consentimiento_transferencia: true,
   })
 
   if (error) {
     const errorText = getErrorText(error)
+    if (/consentimiento|consent|autoriza|transferencia internacional/.test(errorText)) {
+      throw new CreateOrderError('Debe autorizar el tratamiento indicado para poder registrar el pedido.', 'consent')
+    }
     if (/stock|insuficiente|insufficient|existencias|disponible/.test(errorText)) {
       throw new CreateOrderError('No hay stock suficiente para completar el pedido. Revisá las cantidades e intentá nuevamente.', 'stock')
     }

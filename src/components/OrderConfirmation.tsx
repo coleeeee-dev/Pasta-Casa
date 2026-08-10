@@ -7,7 +7,7 @@ import { formatOrderStatus, formatPaymentMethod } from '../utils/payment'
 import { buildWhatsAppUrl, getDeliveryWhatsAppMessage, getTransferWhatsAppMessage } from '../utils/whatsapp'
 
 interface Props { order: Order; onFinish: () => void }
-type CopiedField = 'code' | 'cbu' | 'taxId'
+type CopiedField = 'code' | 'cbu'
 
 export function OrderConfirmation({ order, onFinish }: Props) {
   const [copiedField, setCopiedField] = useState<CopiedField | null>(null)
@@ -68,7 +68,6 @@ function TransferInstructions({ order, config, copiedField, onCopy }: TransferIn
     <p>Tenés {config.horas_limite_pago} horas para realizar la transferencia y enviar el comprobante.</p>
     <div className="payment-data-list">
       <PaymentDatum label="CBU" value={config.cbu} copyLabel="Copiar CBU" copied={copiedField === 'cbu'} onCopy={() => onCopy(config.cbu, 'cbu')} />
-      <PaymentDatum label="Identificación fiscal" value={config.identificacion_fiscal} copyLabel="Copiar identificación fiscal" copied={copiedField === 'taxId'} onCopy={() => onCopy(config.identificacion_fiscal, 'taxId')} />
       <div><span>Titular</span><strong>{config.titular}</strong></div>
       <div><span>Total a transferir</span><strong>{formatARS(order.total)}</strong></div>
       <div><span>WhatsApp para comprobantes</span><strong>{config.whatsapp}</strong></div>

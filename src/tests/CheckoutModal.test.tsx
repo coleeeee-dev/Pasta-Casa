@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { CheckoutModal } from '../components/CheckoutModal'
 import { CreateOrderError } from '../services/orderService'
 import type { CartItem, PaymentMethod, PublicBusinessConfig } from '../types'
+import { formatARS } from '../utils/currency'
 import { products } from './fixtures/products'
 
 const publicConfig: PublicBusinessConfig = {
@@ -35,7 +36,7 @@ vi.mock('../context/BusinessConfigContext', () => ({ useBusinessConfig: () => ({
 }) }))
 vi.mock('../services/orderService', () => {
   class MockCreateOrderError extends Error {
-    constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'unknown' = 'unknown') {
+    constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
       super(message)
     }
   }
@@ -68,6 +69,9 @@ function fillCustomer(paymentMethod?: PaymentMethod, phone = '+54 9 11 1234 5678
   setInput('telefono', phone)
   if (paymentMethod) act(() => container.querySelector<HTMLInputElement>(`input[value="${paymentMethod}"]`)?.click())
 }
+function acceptPrivacy() {
+  act(() => container.querySelector<HTMLInputElement>('#consentimiento-transferencia')?.click())
+}
 function submit() {
   const form = container.querySelector('form')
   if (!form) throw new Error('No se encontró el formulario')
@@ -76,6 +80,7 @@ function submit() {
 async function completeOrder(method: PaymentMethod) {
   doubles.createOrder.mockResolvedValue({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: method === 'transferencia' ? 'pendiente_pago' : 'pendiente_coordinacion', metodoPago: method, stockReservado: true })
   fillCustomer(method)
+  acceptPrivacy()
   await act(async () => submit())
 }
 
@@ -109,18 +114,55 @@ describe('CheckoutModal', () => {
     expect(container.querySelector('#telefono')).not.toBeNull()
   })
 
+  it('muestra el aviso y el consentimiento comienza desmarcado sin usar localStorage', () => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem')
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    const checkbox = container.querySelector<HTMLInputElement>('#consentimiento-transferencia')
+
+    expect(container.textContent).toContain('Utilizaremos su nombre, apellido y número de celular únicamente para registrar, gestionar y coordinar su pedido.')
+    expect(container.textContent).toContain('Autorizo que los datos necesarios para gestionar mi pedido sean transferidos y almacenados fuera de Argentina.')
+    expect(checkbox?.checked).toBe(false)
+    expect(checkbox?.required).toBe(true)
+    expect(container.querySelector<HTMLAnchorElement>('a[href="/privacidad"]')?.textContent).toBe('Política de Privacidad')
+    acceptPrivacy()
+    expect(checkbox?.checked).toBe(true)
+    expect(getItem).not.toHaveBeenCalled()
+    expect(setItem).not.toHaveBeenCalled()
+  })
+
+  it('bloquea el pedido y muestra un mensaje si falta el consentimiento', async () => {
+    fillCustomer('transferencia')
+    await act(async () => submit())
+
+    expect(doubles.createOrder).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Debe autorizar el tratamiento indicado para poder registrar el pedido.')
+    expect(container.querySelector<HTMLInputElement>('#consentimiento-transferencia')?.getAttribute('aria-invalid')).toBe('true')
+  })
+
+  it('comunica true al servicio cuando el consentimiento fue marcado', async () => {
+    doubles.createOrder.mockResolvedValue({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: 'pendiente_pago', metodoPago: 'transferencia', stockReservado: true })
+    fillCustomer('transferencia')
+    acceptPrivacy()
+    await act(async () => submit())
+
+    expect(doubles.createOrder).toHaveBeenCalledWith(expect.any(Object), doubles.cart.items, true)
+  })
+
   it('mantiene datos y carrito cuando el RPC falla', async () => {
     doubles.createOrder.mockRejectedValue(new Error('fallo RPC'))
     fillCustomer('contraentrega')
+    acceptPrivacy()
     await act(async () => submit())
     expect(doubles.clearCart).not.toHaveBeenCalled()
     expect(container.querySelector<HTMLInputElement>('#telefono')?.value).toBe('+54 9 11 1234 5678')
+    expect(container.querySelector<HTMLInputElement>('#consentimiento-transferencia')?.checked).toBe(true)
     expect(button('Reintentar pedido')).toBeDefined()
   })
 
   it('refresca productos y conserva el carrito cuando falta stock', async () => {
     doubles.createOrder.mockRejectedValue(new CreateOrderError('No hay stock suficiente.', 'stock'))
     fillCustomer('contraentrega')
+    acceptPrivacy()
     await act(async () => submit())
     expect(doubles.clearCart).not.toHaveBeenCalled()
     expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
@@ -132,6 +174,7 @@ describe('CheckoutModal', () => {
     let resolveOrder!: (value: unknown) => void
     doubles.createOrder.mockReturnValue(new Promise((resolve) => { resolveOrder = resolve }))
     fillCustomer('transferencia')
+    acceptPrivacy()
     act(() => { submit(); submit() })
     expect(doubles.createOrder).toHaveBeenCalledTimes(1)
     await act(async () => { resolveOrder({ pedidoId: '77', codigo: 'PED-77', total: 17600, estado: 'pendiente_pago', metodoPago: 'transferencia', stockReservado: true }); await Promise.resolve() })
@@ -145,6 +188,10 @@ describe('CheckoutModal', () => {
     expect(container.textContent).toContain('Los productos de tu pedido quedaron reservados')
     expect(container.textContent).toContain(publicConfig.cbu)
     expect(container.textContent).toContain(publicConfig.titular)
+    expect(container.textContent).toContain(formatARS(17600))
+    expect(container.textContent).toContain(publicConfig.whatsapp)
+    expect(container.textContent).not.toContain(publicConfig.identificacion_fiscal)
+    expect(container.textContent).not.toContain('Identificación fiscal')
     expect(container.textContent).toContain(`Tenés ${publicConfig.horas_limite_pago} horas`)
     expect(container.textContent).not.toContain(String.fromCharCode(81, 82))
   })

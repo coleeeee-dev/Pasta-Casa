@@ -8,6 +8,7 @@ export function Footer() {
         <Link to="/">Catálogo</Link>
         <Link to="/quienes-somos">Quiénes somos</Link>
         <Link to="/contacto">Contacto</Link>
+        <Link to="/privacidad">Política de Privacidad</Link>
       </nav>
       <p className="footer-note">Hecho en casa · Atención directa</p>
     </div>

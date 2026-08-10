@@ -20,6 +20,8 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
   const [customer, setCustomer] = useState(emptyCustomer)
   const [errors, setErrors] = useState<CustomerErrors>({})
   const [order, setOrder] = useState<Order | null>(null)
+  const [consentimientoTransferencia, setConsentimientoTransferencia] = useState(false)
+  const [consentError, setConsentError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const submittingRef = useRef(false)
@@ -35,13 +37,16 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
     if (submittingRef.current) return
     const nextErrors = validateCustomer(customer)
     setErrors(nextErrors)
-    if (Object.keys(nextErrors).length) return
+    if (!consentimientoTransferencia) {
+      setConsentError('Debe autorizar el tratamiento indicado para poder registrar el pedido.')
+    }
+    if (Object.keys(nextErrors).length || !consentimientoTransferencia) return
 
     submittingRef.current = true
     setSubmitting(true)
     setSubmitError('')
     try {
-      const created = await createOrder(customer, items)
+      const created = await createOrder(customer, items, consentimientoTransferencia)
       setOrder({
         id: created.pedidoId,
         code: created.codigo,
@@ -69,11 +74,26 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
     setStep(1)
     setCustomer(emptyCustomer)
     setOrder(null)
+    setConsentimientoTransferencia(false)
+    setConsentError('')
     setErrors({})
     setSubmitError('')
     onFinished()
   }
-  const safeClose = () => { if (submitting) return; if (step === 3) finish(); else onClose() }
+  const safeClose = () => {
+    if (submitting) return
+    if (step === 3) finish()
+    else {
+      setConsentimientoTransferencia(false)
+      setConsentError('')
+      onClose()
+    }
+  }
+  const backToCart = () => {
+    setConsentimientoTransferencia(false)
+    setConsentError('')
+    onBackToCart()
+  }
 
   return <div className="overlay modal-overlay" role="presentation">
     <section className="checkout" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
@@ -86,7 +106,7 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
         {step === 1 && <div className="summary-step">
           <div className="summary-list">{items.map(({ product, quantity }) => <div className="summary-item" key={product.id}>{product.imagen ? <img src={product.imagen} alt="" /> : <div className="summary-image-placeholder" aria-hidden="true">PC</div>}<div><strong>{product.nombre}</strong><small>{formatDozens(quantity)} · {formatARS(product.precio)} por docena</small></div><span>{formatARS(product.precio * quantity)}</span></div>)}</div>
           <div className="summary-total"><span>Total del pedido</span><strong>{formatARS(total)}</strong></div>
-          <div className="checkout-actions"><button className="button button-secondary" onClick={onBackToCart}>← Volver al carrito</button><button className="button button-primary" onClick={() => setStep(2)}>Continuar con mis datos →</button></div>
+          <div className="checkout-actions"><button className="button button-secondary" onClick={backToCart}>← Volver al carrito</button><button className="button button-primary" onClick={() => setStep(2)}>Continuar con mis datos →</button></div>
         </div>}
         {step === 2 && <form onSubmit={confirm} noValidate>
           <p className="form-intro">Usaremos estos datos solamente para registrar y coordinar tu pedido. No se guardan en este dispositivo.</p>
@@ -103,6 +123,28 @@ export function CheckoutModal({ open, onClose, onBackToCart, onFinished }: Props
             </div>
             {errors.metodoPago && <p id="metodo-pago-error" className="field-error" role="alert">{errors.metodoPago}</p>}
           </fieldset>
+          <section className={`privacy-consent ${consentError ? 'has-error' : ''}`} aria-labelledby="privacy-notice-title">
+            <p id="privacy-notice-title">Utilizaremos su nombre, apellido y número de celular únicamente para registrar, gestionar y coordinar su pedido.</p>
+            <label className="privacy-consent-option" htmlFor="consentimiento-transferencia">
+              <input
+                id="consentimiento-transferencia"
+                name="consentimiento-transferencia"
+                type="checkbox"
+                required
+                checked={consentimientoTransferencia}
+                disabled={submitting}
+                aria-invalid={Boolean(consentError)}
+                aria-describedby={consentError ? 'consentimiento-transferencia-error' : undefined}
+                onChange={(event) => {
+                  setConsentimientoTransferencia(event.target.checked)
+                  if (event.target.checked) setConsentError('')
+                }}
+              />
+              <span>Autorizo que los datos necesarios para gestionar mi pedido sean transferidos y almacenados fuera de Argentina.</span>
+            </label>
+            <a className="privacy-policy-link" href="/privacidad" target="_blank" rel="noreferrer">Política de Privacidad</a>
+            {consentError && <p id="consentimiento-transferencia-error" className="field-error" role="alert">{consentError}</p>}
+          </section>
           {submitError && <div className="notice error checkout-submit-error" role="alert">{submitError}</div>}
           <div className="checkout-actions"><button type="button" className="button button-secondary" onClick={() => setStep(1)} disabled={submitting}>← Volver al resumen</button><button className="button button-primary" type="submit" disabled={submitting} aria-busy={submitting}>{submitting ? 'Creando pedido…' : submitError ? 'Reintentar pedido' : 'Confirmar pedido'}</button></div>
         </form>}

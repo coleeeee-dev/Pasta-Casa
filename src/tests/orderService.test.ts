@@ -36,19 +36,20 @@ describe('servicio de pedidos', () => {
     fromMock.mockReset()
   })
 
-  it.each<PaymentMethod>(['transferencia', 'contraentrega'])('envía %s a crear_pedido_v4 con teléfono normalizado', async (metodoPago) => {
+  it.each<PaymentMethod>(['transferencia', 'contraentrega'])('envía %s a crear_pedido_v5 con teléfono normalizado y consentimiento expreso', async (metodoPago) => {
     rpcMock.mockResolvedValue(rpcResponse(metodoPago) as never)
 
-    await createOrder(customer(metodoPago), items)
+    await createOrder(customer(metodoPago), items, true)
 
-    expect(rpcMock).toHaveBeenCalledWith('crear_pedido_v4', {
+    expect(rpcMock).toHaveBeenCalledWith('crear_pedido_v5', {
       p_nombre: 'Ana',
       p_apellido: 'Díaz',
       p_telefono: '5491112345678',
       p_metodo_pago: metodoPago,
       p_items: [{ producto_id: 1, cantidad: 2 }],
+      p_consentimiento_transferencia: true,
     })
-    expect(rpcMock).not.toHaveBeenCalledWith('crear_pedido_v3', expect.anything())
+    expect(rpcMock).toHaveBeenCalledTimes(1)
     const rpcPayload = rpcMock.mock.calls[0]?.[1] as Record<string, unknown>
     expect(Object.keys(rpcPayload)).not.toEqual(expect.arrayContaining([
       'p_stock', 'p_precio', 'p_subtotal', 'p_total', 'p_estado',
@@ -57,13 +58,18 @@ describe('servicio de pedidos', () => {
   })
 
   it('rechaza el teléfono antes de invocar Supabase', async () => {
-    await expect(createOrder(customer('transferencia', '123'), items)).rejects.toEqual(expect.objectContaining({ reason: 'phone' }))
+    await expect(createOrder(customer('transferencia', '123'), items, true)).rejects.toEqual(expect.objectContaining({ reason: 'phone' }))
+    expect(rpcMock).not.toHaveBeenCalled()
+  })
+
+  it('rechaza la creación sin consentimiento antes de invocar Supabase', async () => {
+    await expect(createOrder(customer('transferencia'), items, false)).rejects.toEqual(expect.objectContaining({ reason: 'consent' }))
     expect(rpcMock).not.toHaveBeenCalled()
   })
 
   it('crea el pedido con una sola RPC y no realiza updates manuales de stock', async () => {
     rpcMock.mockResolvedValue(rpcResponse() as never)
-    await createOrder(customer('transferencia'), items)
+    await createOrder(customer('transferencia'), items, true)
     expect(rpcMock).toHaveBeenCalledTimes(1)
     expect(fromMock).not.toHaveBeenCalled()
   })
@@ -103,11 +109,19 @@ describe('servicio de pedidos', () => {
 
   it('identifica claramente un error de stock insuficiente', async () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'Stock insuficiente para el producto 1' } } as never)
-    await expect(createOrder(customer('transferencia'), items)).rejects.toEqual(expect.objectContaining({ reason: 'stock' }))
+    await expect(createOrder(customer('transferencia'), items, true)).rejects.toEqual(expect.objectContaining({ reason: 'stock' }))
   })
 
   it('explica un método de pago rechazado por Supabase', async () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'Método de pago inválido' } } as never)
-    await expect(createOrder(customer('transferencia'), items)).rejects.toEqual(expect.objectContaining({ reason: 'payment_method' }))
+    await expect(createOrder(customer('transferencia'), items, true)).rejects.toEqual(expect.objectContaining({ reason: 'payment_method' }))
+  })
+
+  it('explica un consentimiento rechazado por Supabase', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: 'Consentimiento de transferencia internacional requerido' } } as never)
+    await expect(createOrder(customer('transferencia'), items, true)).rejects.toEqual(expect.objectContaining({
+      reason: 'consent',
+      message: 'Debe autorizar el tratamiento indicado para poder registrar el pedido.',
+    }))
   })
 })

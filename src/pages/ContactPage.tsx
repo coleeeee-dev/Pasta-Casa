@@ -10,8 +10,8 @@ export function ContactPage() {
   return <main className="inner-page contact-page">
     <header className="page-hero contact-hero">
       <p className="eyebrow">Hablemos</p>
-      <h1>Estamos para <em>ayudarte.</em></h1>
-      <p>Si querés hacer una consulta, coordinar un pedido o consultar una entrega, escribinos por WhatsApp.</p>
+      <h1>Estamos para <em>ayudarle.</em></h1>
+      <p>Para realizar una consulta, coordinar un pedido o consultar una entrega, puede comunicarse por WhatsApp.</p>
     </header>
 
     <section className="contact-grid" aria-label="Información de contacto">
@@ -28,15 +28,32 @@ export function ContactPage() {
       </article>
 
       <article className="contact-card">
-        <span className="contact-icon" aria-hidden="true">H</span>
+        <span className="contact-icon" aria-hidden="true">@</span>
         <div className="contact-card-content">
-          <h2>Horarios de atención</h2>
+          <h2>Correo electrónico</h2>
+          <p>Consultas relacionadas con pedidos y atención al cliente.</p>
+          <a className="contact-number contact-link" href="mailto:ulises_santy@live.com.ar">ulises_santy@live.com.ar</a>
+        </div>
+      </article>
+
+      <article className="contact-card">
+        <span className="contact-icon" aria-hidden="true">D</span>
+        <div className="contact-card-content">
+          <h2>Domicilio</h2>
+          <address className="contact-address">San Martín 2681<br />Concepción</address>
+        </div>
+      </article>
+
+      <article className="contact-card">
+        <span className="contact-icon" aria-hidden="true">E</span>
+        <div className="contact-card-content">
+          <h2>Pedidos y entregas</h2>
           <p className="contact-days">Sábados y domingos</p>
           <div className="contact-hours" aria-label="Horarios de sábados y domingos">
-            <span>9:00 <i aria-hidden="true">—</i> 12:00</span>
+            <span>09:00 <i aria-hidden="true">—</i> 12:00</span>
             <span>16:00 <i aria-hidden="true">—</i> 20:00</span>
           </div>
-          <small>Fuera de estos horarios podés dejarnos tu mensaje y te responderemos cuando retomemos la atención.</small>
+          <p className="free-delivery">Entrega sin costo. La coordinación se realiza por WhatsApp.</p>
         </div>
       </article>
     </section>
