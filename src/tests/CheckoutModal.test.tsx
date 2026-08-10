@@ -214,9 +214,14 @@ describe('CheckoutModal', () => {
 
   it('muestra los datos de coordinación y crea el mensaje de contraentrega', async () => {
     await completeOrder('contraentrega')
+    expect(container.textContent).toContain('Coordinación de entrega')
+    expect(container.textContent).toContain('Tu pedido fue registrado correctamente')
     expect(container.textContent).toContain('Para coordinar la entrega, comunicate con nosotros por WhatsApp')
-    expect(container.textContent).toContain('Dirección:')
-    expect(container.textContent).toContain('Pago con:')
+    expect(container.textContent).toContain('Código: PED-77')
+    expect(container.textContent).toContain('Dirección de entrega')
+    expect(container.textContent).toContain('Con cuánto dinero vas a pagar')
+    expect(container.textContent).not.toContain('Dirección:')
+    expect(container.textContent).not.toContain('Pago con:')
     const link = [...container.querySelectorAll<HTMLAnchorElement>('a')].find((item) => item.textContent?.includes('Coordinar entrega'))
     expect(link?.href).toContain('wa.me/5491155550101')
     const message = new URL(link!.href).searchParams.get('text')

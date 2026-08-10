@@ -89,7 +89,6 @@ function CashOnDeliveryInstructions({ code, config }: { code: string; config: Pu
     <p><strong>Tu pedido fue registrado correctamente.</strong></p>
     <p>Para coordinar la entrega, comunicate con nosotros por WhatsApp.</p>
     <div className="coordination-checklist"><p>Para coordinar tu pedido indicá:</p><ul><li><strong>Código:</strong> {code}</li><li>Dirección de entrega</li><li>Con cuánto dinero vas a pagar</li></ul></div>
-    <p className="whatsapp-message-preview">Dirección:<br />Pago con:</p>
     <a className="button button-primary button-wide" href={whatsappUrl} target="_blank" rel="noreferrer">Coordinar entrega por WhatsApp</a>
   </section>
 }
