@@ -1,5 +1,8 @@
 import type { CartItem, Product } from '../types'
 
+export const MAX_ORDER_DOZENS = 10
+export const CART_LIMIT_MESSAGE = 'Puedes agregar un máximo de 10 docenas por pedido.'
+
 export interface CartState { items: CartItem[]; notice: string }
 export type CartAction =
   | { type: 'ADD'; product: Product; quantity: number }
@@ -11,6 +14,16 @@ export type CartAction =
   | { type: 'DISMISS_NOTICE' }
 
 export const initialCartState: CartState = { items: [], notice: '' }
+
+export const getCartCount = (items: CartItem[]) => items.reduce((total, item) => total + item.quantity, 0)
+
+export function getMaxProductQuantity(items: CartItem[], product: Product): number {
+  const otherProductsCount = items.reduce(
+    (total, item) => item.product.id === product.id ? total : total + item.quantity,
+    0,
+  )
+  return Math.max(0, Math.min(product.stock, MAX_ORDER_DOZENS - otherProductsCount))
+}
 
 export function cartReducer(state: CartState, action: CartAction): CartState {
   switch (action.type) {
@@ -42,6 +55,9 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       const existing = state.items.find((item) => item.product.id === action.product.id)
       const current = existing?.quantity ?? 0
       const requested = current + Math.max(1, action.quantity)
+      if (getCartCount(state.items) + Math.max(1, action.quantity) > MAX_ORDER_DOZENS) {
+        return { ...state, notice: CART_LIMIT_MESSAGE }
+      }
       const quantity = Math.min(requested, action.product.stock)
       const notice = requested > action.product.stock ? `Solo hay ${action.product.stock} ${action.product.stock === 1 ? 'docena disponible' : 'docenas disponibles'}.` : ''
       const items = existing
@@ -53,6 +69,13 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
       const target = state.items.find((item) => item.product.id === action.productId)
       if (!target) return state
       if (action.quantity <= 0) return { items: state.items.filter((item) => item.product.id !== action.productId), notice: '' }
+      const otherProductsCount = state.items.reduce(
+        (total, item) => item.product.id === action.productId ? total : total + item.quantity,
+        0,
+      )
+      if (otherProductsCount + action.quantity > MAX_ORDER_DOZENS) {
+        return { ...state, notice: CART_LIMIT_MESSAGE }
+      }
       const quantity = Math.min(action.quantity, target.product.stock)
       return {
         items: state.items.map((item) => item.product.id === action.productId ? { ...item, quantity } : item),
@@ -67,4 +90,3 @@ export function cartReducer(state: CartState, action: CartAction): CartState {
 
 export const getItemSubtotal = (item: CartItem) => item.product.precio * item.quantity
 export const getCartTotal = (items: CartItem[]) => items.reduce((total, item) => total + getItemSubtotal(item), 0)
-export const getCartCount = (items: CartItem[]) => items.reduce((total, item) => total + item.quantity, 0)

@@ -24,7 +24,7 @@ interface CreateOrderRow {
 }
 
 export class CreateOrderError extends Error {
-  constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
+  constructor(message: string, public readonly reason: 'stock' | 'limit' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
     super(message)
     this.name = 'CreateOrderError'
   }
@@ -74,7 +74,7 @@ export async function createOrder(customer: CustomerData, items: CartItem[], con
     throw new CreateOrderError('Debe autorizar el tratamiento indicado para poder registrar el pedido.', 'consent')
   }
 
-  const { data, error } = await supabase.rpc('crear_pedido_v5', {
+  const { data, error } = await supabase.rpc('crear_pedido_v6', {
     p_nombre: customer.nombre,
     p_apellido: customer.apellido,
     p_telefono: normalizePhone(customer.telefono),
@@ -85,6 +85,9 @@ export async function createOrder(customer: CustomerData, items: CartItem[], con
 
   if (error) {
     const errorText = getErrorText(error)
+    if (/10\s+docenas|superar.{0,20}(10|diez)|m[aá]ximo.{0,20}(10|diez)|l[ií]mite.{0,20}docenas/.test(errorText)) {
+      throw new CreateOrderError('Puedes agregar un máximo de 10 docenas por pedido.', 'limit')
+    }
     if (/consentimiento|consent|autoriza|transferencia internacional/.test(errorText)) {
       throw new CreateOrderError('Debe autorizar el tratamiento indicado para poder registrar el pedido.', 'consent')
     }

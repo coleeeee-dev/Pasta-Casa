@@ -2,8 +2,8 @@ import type { CartItem } from '../types'
 import { formatARS } from '../utils/currency'
 import { formatDozens } from '../utils/dozens'
 
-interface Props { item: CartItem; onSet: (quantity: number) => void; onRemove: () => void }
-export function CartLine({ item, onSet, onRemove }: Props) {
+interface Props { item: CartItem; canIncrease: boolean; onSet: (quantity: number) => void; onRemove: () => void }
+export function CartLine({ item, canIncrease, onSet, onRemove }: Props) {
   return <div className="cart-line">
     {item.product.imagen ? <img src={item.product.imagen} alt="" /> : <div className="cart-line-image-placeholder" aria-hidden="true">PC</div>}
     <div className="cart-line-main">
@@ -11,7 +11,7 @@ export function CartLine({ item, onSet, onRemove }: Props) {
       <div className="cart-line-bottom">
         <div className="stepper" aria-label={`Cantidad de ${item.product.nombre}`}>
           <button onClick={() => onSet(item.quantity - 1)} aria-label="Disminuir cantidad">−</button><span>{item.quantity}</span>
-          <button onClick={() => onSet(item.quantity + 1)} disabled={item.quantity >= item.product.stock} aria-label="Aumentar cantidad">+</button>
+          <button onClick={() => onSet(item.quantity + 1)} disabled={!canIncrease || item.quantity >= item.product.stock} aria-label="Aumentar cantidad">+</button>
         </div>
         <div className="line-price"><small>{formatARS(item.product.precio)} por docena</small><strong>Subtotal: {formatARS(item.product.precio * item.quantity)}</strong></div>
       </div>

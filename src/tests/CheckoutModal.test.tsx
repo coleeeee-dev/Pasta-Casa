@@ -36,7 +36,7 @@ vi.mock('../context/BusinessConfigContext', () => ({ useBusinessConfig: () => ({
 }) }))
 vi.mock('../services/orderService', () => {
   class MockCreateOrderError extends Error {
-    constructor(message: string, public readonly reason: 'stock' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
+    constructor(message: string, public readonly reason: 'stock' | 'limit' | 'payment_method' | 'phone' | 'consent' | 'unknown' = 'unknown') {
       super(message)
     }
   }
@@ -168,6 +168,19 @@ describe('CheckoutModal', () => {
     expect(doubles.reloadProducts).toHaveBeenCalledTimes(1)
     expect(container.textContent).toContain('No hay stock suficiente')
     expect(container.querySelector<HTMLInputElement>('#telefono')?.value).toBe('+54 9 11 1234 5678')
+  })
+
+  it('conserva carrito, checkout y datos si Supabase rechaza el límite de docenas', async () => {
+    doubles.createOrder.mockRejectedValue(new CreateOrderError('Puedes agregar un máximo de 10 docenas por pedido.', 'limit'))
+    fillCustomer('contraentrega')
+    acceptPrivacy()
+    await act(async () => submit())
+
+    expect(doubles.clearCart).not.toHaveBeenCalled()
+    expect(doubles.reloadProducts).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Puedes agregar un máximo de 10 docenas por pedido.')
+    expect(container.querySelector<HTMLInputElement>('#telefono')?.value).toBe('+54 9 11 1234 5678')
+    expect(container.querySelector<HTMLInputElement>('#consentimiento-transferencia')?.checked).toBe(true)
   })
 
   it('bloquea llamadas duplicadas mientras el RPC está pendiente', async () => {

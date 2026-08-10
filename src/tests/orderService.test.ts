@@ -36,12 +36,12 @@ describe('servicio de pedidos', () => {
     fromMock.mockReset()
   })
 
-  it.each<PaymentMethod>(['transferencia', 'contraentrega'])('envía %s a crear_pedido_v5 con teléfono normalizado y consentimiento expreso', async (metodoPago) => {
+  it.each<PaymentMethod>(['transferencia', 'contraentrega'])('envía %s a crear_pedido_v6 con teléfono normalizado y consentimiento expreso', async (metodoPago) => {
     rpcMock.mockResolvedValue(rpcResponse(metodoPago) as never)
 
     await createOrder(customer(metodoPago), items, true)
 
-    expect(rpcMock).toHaveBeenCalledWith('crear_pedido_v5', {
+    expect(rpcMock).toHaveBeenCalledWith('crear_pedido_v6', {
       p_nombre: 'Ana',
       p_apellido: 'Díaz',
       p_telefono: '5491112345678',
@@ -110,6 +110,14 @@ describe('servicio de pedidos', () => {
   it('identifica claramente un error de stock insuficiente', async () => {
     rpcMock.mockResolvedValue({ data: null, error: { message: 'Stock insuficiente para el producto 1' } } as never)
     await expect(createOrder(customer('transferencia'), items, true)).rejects.toEqual(expect.objectContaining({ reason: 'stock' }))
+  })
+
+  it('traduce el límite de Supabase sin alterar los datos del pedido', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: 'El pedido no puede superar las 10 docenas' } } as never)
+    await expect(createOrder(customer('transferencia'), items, true)).rejects.toEqual(expect.objectContaining({
+      reason: 'limit',
+      message: 'Puedes agregar un máximo de 10 docenas por pedido.',
+    }))
   })
 
   it('explica un método de pago rechazado por Supabase', async () => {
